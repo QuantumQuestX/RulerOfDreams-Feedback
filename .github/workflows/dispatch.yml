@@ -1,0 +1,44 @@
+name: Issue Dispatcher
+on:
+  repository_dispatch:
+    types: [create-issue]
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Debug Mode
+        shell: bash
+        run: |
+          echo "Test mode: $TEST_MODE"
+          echo "Title: $TITLE"
+          echo "Body: $BODY"
+          echo "Labels: $LABELS"
+
+          if [ "${TEST_MODE,,}" = "true" ]; then
+            echo "Test Mode Enabled - Skipping Actual Issue Creation"
+            exit 0
+          fi
+        env:
+          TEST_MODE: ${{ github.event.client_payload.test_mode }}
+          TITLE: ${{ github.event.client_payload.title }}
+          BODY: ${{ github.event.client_payload.body }}
+          LABELS: ${{ join(github.event.client_payload.labels, ',') }}
+
+      - name: Open Issue
+        if: ${{ github.event.client_payload.test_mode != 'true' }}
+        shell: bash
+        run: | 
+          gh issue create \
+            --repo "QuantumQuestX/EmotionalDamage" \
+            --title "$TITLE" \
+            --body "$BODY" \
+            --label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.RELAY_TOKEN }}
+          TITLE: ${{ github.event.client_payload.title }}
+          BODY: ${{ github.event.client_payload.body }}
+          LABELS: ${{ join(github.event.client_payload.labels, ',') }}
+
